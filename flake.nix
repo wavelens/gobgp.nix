@@ -1,0 +1,77 @@
+/*
+ * SPDX-FileCopyrightText: 2025 Wavelens GmbH <info@wavelens.io>
+ *
+ * SPDX-License-Identifier: GPL-3.0-only
+ */
+
+{
+  description = "gobgp nix module";
+
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
+    flake-utils.url = "github:numtide/flake-utils";
+  };
+
+  outputs = { self, nixpkgs, flake-utils, ... }@inputs: flake-utils.lib.eachDefaultSystem (system: let
+    pkgs = import nixpkgs {
+      inherit system;
+      overlays = [ self.overlays.gobgp ];
+    };
+  in {
+    checks = import ./tests { inherit self inputs system pkgs; };
+    apps = import ./tests {
+      inherit self inputs system pkgs;
+      interactive = true;
+    };
+  }) // {
+    overlays = {
+      gobgp = final: super: let
+        version = "4.0.0";
+        vendorHash = "sha256-y8nhrKQnTXfnDDyr/xZd5b9ccXaM85rd8RKHtoDBuwI=";
+        src = final.fetchFromGitHub {
+          owner = "osrg";
+          repo = "gobgp";
+          rev = "v4.0.0";
+          sha256 = "sha256-hXpNNDGiiJ0m8TjZe4ZOFhwma7KG7bm5iud1F0lcRzg=";
+        };
+      in {
+        gobgpd = super.gobgpd.overrideAttrs (old: { inherit src version vendorHash; });
+        gobgp = super.gobgp.overrideAttrs (old: { inherit src version vendorHash; });
+      };
+
+      # issue: https://github.com/osrg/gobgp/issues/3251
+      frr = final: super: {
+        frr = super.frr.overrideAttrs (old: rec {
+          version = "9.0.5";
+          src = final.fetchFromGitHub {
+            owner = "FRRouting";
+            repo = "frr";
+            rev = "frr-${version}";
+            hash = "sha256-2Wi4LE7FIbodeSYKB0ZnXcjFkpOogsilNtshSNVp0kM=";
+          };
+
+          patches = (old.patches or [ ]) ++ [
+            ./utils/frr.patch
+          ];
+
+          clippy-helper = old.clippy-helper.overrideAttrs (old: {
+            patches = (old.patches or [ ]) ++ [
+              ./utils/frr.patch
+            ];
+          });
+        });
+      };
+    };
+
+    nixosModules = rec {
+      gobgp = { config, lib, ... }: {
+        imports = [ ./module ];
+        nixpkgs.overlays = lib.mkIf (config.services.gobgpd.enable && config.services.gobgpd.zebra) [
+          self.overlays.frr
+        ];
+      };
+
+      default = gobgp;
+    };
+  };
+}
