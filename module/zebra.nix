@@ -17,11 +17,6 @@ in {
       gobgpd.after = [ "frr.service" ];
     };
 
-    systemd.tmpfiles.rules = [
-      "L /etc/frr.conf - - - - /etc/frr/frr.conf"
-      "L /etc/daemons - - - - /etc/frr/daemons"
-    ];
-
     services = {
       frr.config = "!";
       gobgpd.config.zebra = {

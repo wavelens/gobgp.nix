@@ -8,7 +8,7 @@
   description = "gobgp nix module";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
     search = {
       url = "github:NuschtOS/search";
@@ -65,6 +65,18 @@
             rev = "frr-${version}";
             hash = "sha256-2Wi4LE7FIbodeSYKB0ZnXcjFkpOogsilNtshSNVp0kM=";
           };
+
+          configureFlags = let
+            inherit (nixpkgs) lib;
+            isLocalstatedirFlag = lib.hasPrefix "--localstatedir=";
+            isSysconfdirFlag = lib.hasPrefix "--sysconfdir=";
+          in map (flag: if (isLocalstatedirFlag flag) then
+              "--localstatedir=/var/run/frr"
+            else if (isSysconfdirFlag flag) then
+              "--sysconfdir=/etc/frr"
+            else
+              flag
+          ) (old.configureFlags or [ ]);
 
           patches = (old.patches or [ ]) ++ [
             ./utils/frr.patch
