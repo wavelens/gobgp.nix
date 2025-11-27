@@ -16,6 +16,12 @@ in {
 
   options.services.gobgpd = {
     enable = lib.mkEnableOption "Enable the GoBGP routing daemon.";
+    package = lib.mkOption {
+      type = lib.types.package;
+      default = pkgs.gobgpd;
+      description = "The GoBGP Daemon package to use.";
+    };
+
     configFile = lib.mkOption {
       type = lib.types.path;
       default = pkgs.writers.writeTOML "gobgpd.conf" (generateToml cfg.config);
@@ -26,7 +32,7 @@ in {
   };
 
   config = lib.mkIf cfg.enable {
-    environment.systemPackages = [ pkgs.gobgp ];
+    environment.systemPackages = lib.optional (cfg.package == pkgs.gobgpd) pkgs.gobgp;
     users = {
       groups.gobgpd = { };
       users.gobgpd = {
@@ -44,9 +50,9 @@ in {
         Type = "notify";
         User = "gobgpd";
         Group = "gobgpd";
-        ExecStartPre = "${pkgs.gobgpd}/bin/gobgpd -f ${cfg.configFile} -d";
-        ExecStart = "${pkgs.gobgpd}/bin/gobgpd -f ${cfg.configFile} --sdnotify";
-        ExecReload = "${pkgs.gobgpd}/bin/gobgpd -r";
+        ExecStartPre = "${lib.getExe cfg.package} -f ${cfg.configFile} -d";
+        ExecStart = "${lib.getExe cfg.package} -f ${cfg.configFile} --sdnotify";
+        ExecReload = "${lib.getExe cfg.package} -r";
         AmbientCapabilities = "cap_net_bind_service";
       };
     };
