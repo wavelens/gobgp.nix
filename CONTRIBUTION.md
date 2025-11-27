@@ -5,7 +5,7 @@ When contributing to this repository, please first discuss the change you wish t
 
 ## Licensing
 
-This project is licensed under the Affero General Public License (AGPL) version 3.0. By contributing to this project, you agree that your contributions will be licensed under the AGPL-3.0.
+This project is licensed under the General Public License (GPL) version 3.0. By contributing to this project, you agree that your contributions will be licensed under the GPL-3.0.
 
 ## Code of Conduct
 

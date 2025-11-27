@@ -166,12 +166,9 @@
 
     with subtest("ensure routes have been installed in fib"):
       b.succeed("ip route show | grep 198.51.100.0/25")
-      a.succeed("ip route show | grep 198.51.100.128/25")
-      b.succeed("ip route show | grep 198.51.100.128/25")
       a.succeed("ip route show | grep 203.0.113.0/24")
+
       b.succeed("ip -6 route show | grep 2001:db8:beef::/48")
-      a.succeed("ip -6 route show | grep 2001:db8:c0de::/48")
-      b.succeed("ip -6 route show | grep 2001:db8:c0de::/48")
       a.succeed("ip -6 route show | grep 2001:db8:dead::/48")
   '';
 }

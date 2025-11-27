@@ -10,14 +10,30 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
     flake-utils.url = "github:numtide/flake-utils";
+    search = {
+      url = "github:NuschtOS/search";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs, flake-utils, ... }@inputs: flake-utils.lib.eachDefaultSystem (system: let
+  outputs = { self, nixpkgs, flake-utils, search, ... }@inputs: flake-utils.lib.eachDefaultSystem (system: let
     pkgs = import nixpkgs {
       inherit system;
       overlays = [ self.overlays.gobgp ];
     };
   in {
+    packages = {
+      search = search.packages.${system}.mkSearch {
+        title = "GoBGP Modules Search";
+        baseHref = "/gobgp.nix/";
+        urlPrefix = "https://github.com/wavelens/gobgp.nix/blob/main/";
+        modules = [
+          self.nixosModules.default
+          { _module.args = { inherit pkgs; }; }
+        ];
+      };
+    };
+
     checks = import ./tests { inherit self inputs system pkgs; };
     apps = import ./tests {
       inherit self inputs system pkgs;
