@@ -17,10 +17,7 @@
   };
 
   outputs = { self, nixpkgs, flake-utils, search, ... }@inputs: flake-utils.lib.eachDefaultSystem (system: let
-    pkgs = import nixpkgs {
-      inherit system;
-      overlays = [ self.overlays.gobgp ];
-    };
+    pkgs = import nixpkgs { inherit system; };
   in {
     packages = {
       search = search.packages.${system}.mkSearch {
@@ -106,9 +103,8 @@
     nixosModules = rec {
       gobgp = { config, lib, ... }: {
         imports = [ ./module ];
-        nixpkgs.overlays = lib.mkIf (config.services.gobgpd.enable && config.services.gobgpd.zebra) [
-          self.overlays.frr
-        ];
+        nixpkgs.overlays = (lib.optional config.services.gobgpd.enable self.overlays.gobgp)
+        ++ (lib.optional (config.services.gobgpd.enable && config.services.gobgpd.zebra) self.overlays.frr);
       };
 
       default = gobgp;
