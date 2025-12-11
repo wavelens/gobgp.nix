@@ -8,12 +8,16 @@
   cfg = config.services.gobgpd;
   generateToml = import ./generate-toml.nix inputs;
   postStartCommands = import ./post-start-commands.nix inputs;
-  validateConfigFile = file: pkgs.runCommand "validated-gobgp.conf" { } ''
-    cat ${file} > gobgp.conf
-    echo "Validating GoBGP configuration file: ${file}"
-    ${lib.getExe cfg.package} -df gobgp.conf
-    mv gobgp.conf $out
-  '';
+  validateConfigFile = file: if cfg.validateConfig then
+    pkgs.runCommand "validated-gobgp.conf" { } ''
+      cat ${file} > gobgp.conf
+      echo "Validating GoBGP configuration file: ${file}"
+      ${lib.getExe cfg.package} -df gobgp.conf
+      mv gobgp.conf $out
+    ''
+  else
+    file;
+
 in {
   disabledModules = [ "services/networking/gobgpd.nix" ];
   imports = [
@@ -27,6 +31,12 @@ in {
       type = lib.types.package;
       default = pkgs.gobgpd;
       description = "The GoBGP Daemon package to use.";
+    };
+
+    validateConfig = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Whether to validate the generated GoBGP configuration file before starting the daemon.";
     };
 
     configFile = lib.mkOption {
