@@ -72,6 +72,24 @@
 
   routePolicyEnumType = lib.types.enum [ "accept-route" "reject-route" ];
 
+  aggregateAddressesType = opt {
+    config = dummyType;
+    prefix = lib.mkOption {
+      type = ipType.anyCidr;
+      description = "Aggregate address prefix (CIDR).";
+    };
+
+    summary-only = lib.mkOption {
+      type = lib.types.bool;
+      description = "Enable summary only for the aggregate address.";
+    };
+
+    policy-name = lib.mkOption {
+      type = lib.types.str;
+      description = "Policy name to apply to the aggregate address.";
+    };
+  };
+
   applyPolicyType = opt {
     config = dummyType;
     default-import-policy = lib.mkOption {
@@ -145,6 +163,7 @@
     use-multiple-paths = nestedEnableType "enabled" "Enable Equal Cost Multipath Routing with Zebra.";
     apply-policy = attrsTypeOf applyPolicyType "Global apply policy settings.";
     confederation = attrsTypeOf confederationType "BGP Confederation settings.";
+    aggregate-addresses = listTypeOf aggregateAddressesType "List of aggregate addresses.";
   };
 
   rpkiServerType = opt {

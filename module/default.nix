@@ -42,7 +42,6 @@ in {
     configFile = lib.mkOption {
       type = lib.types.path;
       default = validateConfigFile (pkgs.writers.writeTOML "gobgpd.conf" (generateToml cfg.config));
-      # default = pkgs.writers.writeTOML "gobgpd.conf" (generateToml cfg.config);
       readOnly = true;
       internal = true;
       description = "Path to an existing GoBGP configuration file. If set, this will override the 'config' option.";
