@@ -42,8 +42,7 @@
         version = "4.1.0";
         vendorHash = "sha256-y8nhrKQnTXfnDDyr/xZd5b9ccXaM85rd8RKHtoDBuwI=";
         src = final.fetchFromGitHub {
-          # owner = "osrg";
-          owner = "derdennisop";
+          owner = "osrg";
           repo = "gobgp";
           rev = "fca4e88d2f11a37840a08703f2f73d872323fa26";
           sha256 = "sha256-h3/zhATuTwslecOSxzthB3VgIrfbAL3wedRI/e9HDJY=";
