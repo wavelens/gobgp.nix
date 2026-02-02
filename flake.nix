@@ -80,13 +80,15 @@
             inherit (nixpkgs) lib;
             isLocalstatedirFlag = lib.hasPrefix "--localstatedir=";
             isSysconfdirFlag = lib.hasPrefix "--sysconfdir=";
-          in map (flag: if (isLocalstatedirFlag flag) then
+          in (map (flag: if (isLocalstatedirFlag flag) then
               "--localstatedir=/var/run/frr"
             else if (isSysconfdirFlag flag) then
               "--sysconfdir=/etc/frr"
             else
               flag
-          ) (old.configureFlags or [ ]);
+          ) (old.configureFlags or [ ])) ++ [
+            "CFLAGS=-Wno-error=declaration-after-statement"
+          ];
 
           patches = (old.patches or [ ]) ++ [
             ./utils/frr.patch
