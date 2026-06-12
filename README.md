@@ -1,6 +1,12 @@
 # GoBGP.nix
 
-[Options Search](https://wavelens.github.io/gobgp.nix)
+<p align="center">
+  <strong><a href="https://wavelens.github.io/gobgp.nix">Options Search</a></strong>
+  •
+  <sup><a href="https://public.gradient.ci/organization/gobgp.nix/project/packages">
+    <img src="https://public.gradient.ci/api/v1/projects/gobgp.nix/packages/badge" alt="Gradient Badge" align="middle">
+  </a></sup>
+</p>
 
 GoBGP.nix is a NixOS module and set of tools to run a BGP router using GoBGP.
 
