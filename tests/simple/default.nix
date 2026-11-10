@@ -91,7 +91,14 @@
           ];
 
           static-paths = {
-            "ipv4".prefix = "203.0.113.0/24";
+            "ipv4" = {
+              prefix = "203.0.113.0/24";
+              identifier = 1;
+              origin = "igp";
+              as-path = [ 64511 ];
+              med = 50;
+              community = [ "64497:100" "64497:200" ];
+            };
             "ipv6".prefix = "2001:db8:dead::/48";
           };
 
@@ -166,5 +173,11 @@
 
       b.succeed("ip -6 route show | grep 2001:db8:beef::/48")
       a.succeed("ip -6 route show | grep 2001:db8:dead::/48")
+
+    with subtest("ensure static path attributes are announced"):
+      route = a.succeed("vtysh -c 'show bgp ipv4 unicast 203.0.113.0/24'")
+      assert "64497 64511" in route, route
+      assert "Origin IGP, metric 50" in route, route
+      assert "Community: 64497:100 64497:200" in route, route
   '';
 }

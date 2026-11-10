@@ -5,27 +5,33 @@
  */
 
 { pkgs, lib, ... }: let
-  # global rib -a ipv4 add <PREFIX> [identifier <VALUE>] [origin { igp | egp | incomplete }] [aspath <ASPATH>] [nexthop <ADDRESS>] [med <NUM>] [local-pref <NUM>] [community <COMMUNITY>] [aigp metric <NUM>] [large-community <LARGE_COMMUNITY>] [aggregator <AGGREGATOR>]
-  staticPathsValues = attrs: builtins.attrValues (lib.optionalAttrs (builtins.hasAttr "static-paths" attrs) attrs.static-paths);
-  setStaticPathsAttribute = attrs: name: attrs-name: if (builtins.hasAttr attrs-name attrs) then
-    "${name} ${toString attrs.${attrs-name}}"
-  else
-    "";
+  optionValueIfEvaluatesOtherwiseFallback = fallback: value: let
+    result = builtins.tryEval value;
+  in if result.success then result.value else fallback;
 
-  containsColon = str: builtins.any (v: v == ":") (lib.stringToCharacters str);
-  family = v: if (containsColon v.prefix) then "ipv6" else "ipv4";
+  addressFamilyForCidrPrefix = prefix: if lib.hasInfix ":" prefix then "ipv6" else "ipv4";
 
-  setStaticPathsAttributes = attrs: attrsMap: builtins.concatStringsSep " " (lib.filter (s: s != "") (lib.mapAttrsToList (k: kv: setStaticPathsAttribute attrs k kv) attrsMap));
+  staticPathIdentifierCommandArguments = path: let
+    identifier = optionValueIfEvaluatesOtherwiseFallback null path.identifier;
+  in lib.optionals (identifier != null) [ "identifier" (toString identifier) ];
 
-in attrs: (map (v: "${lib.getExe pkgs.gobgp} global rib -a ${family v} add ${v.prefix} ${setStaticPathsAttributes attrs {
-  "identifier" = "identifier";
-  "origin" = "origin";
-  "aspath" = "aspath";
-  "nexthop" = "nexthop";
-  "med" = "med";
-  "local-pref" = "local-pref";
-  "community" = "community";
-  "aigp-metric" = "aigp metric";
-  "large-community" = "large-community";
-  "aggregator" = "aggregator";
-}}") (staticPathsValues attrs))
+  staticPathBgpAttributesToGobgpArguments = path: lib.concatLists (lib.mapAttrsToList (name: render: let
+    value = optionValueIfEvaluatesOtherwiseFallback null path.${name};
+  in lib.optionals (value != null && value != [ ]) (render value)) {
+    origin = value: [ "origin" value ];
+    as-path = value: [ "aspath" (toString value) ];
+    nexthop = value: [ "nexthop" value ];
+    med = value: [ "med" (toString value) ];
+    local-pref = value: [ "local-pref" (toString value) ];
+    community = value: [ "community" (lib.concatStringsSep "," value) ];
+    large-community = value: [ "large-community" (lib.concatStringsSep "," value) ];
+    aigp-metric = value: [ "aigp" "metric" (toString value) ];
+    aggregator = value: [ "aggregator" value ];
+  });
+
+in config: map (path: lib.escapeShellArgs (
+  [ (lib.getExe pkgs.gobgp) "global" "rib" "-a" (addressFamilyForCidrPrefix path.prefix) "add" path.prefix ]
+  # gobgp can only parse the identifier right after the prefix, before the path attributes.
+  ++ staticPathIdentifierCommandArguments path
+  ++ staticPathBgpAttributesToGobgpArguments path
+)) (builtins.attrValues (config.static-paths or { }))
