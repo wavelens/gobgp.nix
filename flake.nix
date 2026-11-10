@@ -39,14 +39,14 @@
   }) // {
     overlays = {
       gobgp = final: super: let
-        version = "4.8.0";
-        vendorHash = "sha256-9r8LZlCF4sr8VTyJfDktjhk32afc8ep7GXtqxUnAleE=";
+        version = "4.11.0";
+        vendorHash = "sha256-qQrA5uR6f/MAWSV8Sn9eibUCXanV304LqDLzfJRdPSQ=";
         src = final.fetchFromGitHub {
           # owner = "osrg";
           owner = "DerDennisOP";
           repo = "gobgp";
-          rev = "56f99b84180a81cc7b3fe9b8e0c94580d49b6075";
-          sha256 = "sha256-uqvz/PGyYO1fb041oybE5Tc8vV48V1vmWN0ny4BnNrc=";
+          rev = "71e28e3edb96337a080b3d8a5aacee63ae5abd7d";
+          sha256 = "sha256-NNZbhAE0N6e+xf/dTO/4p5DE2Imqeo9ZoO5hFGArYxQ=";
         };
 
       in {
