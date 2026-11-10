@@ -17,11 +17,6 @@
 
   setStaticPathsAttributes = attrs: attrsMap: builtins.concatStringsSep " " (lib.filter (s: s != "") (lib.mapAttrsToList (k: kv: setStaticPathsAttribute attrs k kv) attrsMap));
 
-  # gobgp global aggregate add <PREFIX> [flags]
-  #     --policy string   policy name to filter contributing routes
-  # -s, --summary-only    suppress more specific routes
-  aggregateAddressesValues = attrs: builtins.attrValues (lib.optionalAttrs (builtins.hasAttr "aggregate-addresses" attrs) attrs.aggregate-addresses);
-
 in attrs: (map (v: "${lib.getExe pkgs.gobgp} global rib -a ${family v} add ${v.prefix} ${setStaticPathsAttributes attrs {
   "identifier" = "identifier";
   "origin" = "origin";
@@ -34,9 +29,3 @@ in attrs: (map (v: "${lib.getExe pkgs.gobgp} global rib -a ${family v} add ${v.p
   "large-community" = "large-community";
   "aggregator" = "aggregator";
 }}") (staticPathsValues attrs))
-++ (map (v: let
-  flags = lib.filter (s: s != "") [
-    (lib.optionalString (builtins.hasAttr "policy" v) "--policy ${v.policy}")
-    (lib.optionalString (builtins.hasAttr "summary-only" v && v."summary-only") "--summary-only")
-  ];
-in "${lib.getExe pkgs.gobgp} global aggregate add ${v.prefix} ${lib.concatStringsSep " " flags}") (aggregateAddressesValues attrs))

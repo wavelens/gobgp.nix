@@ -80,6 +80,8 @@
               export-policy-list = [ "policy0" ];
               default-export-policy = "reject-route";
             };
+
+            aggregates."203.0.112.0/23" = { };
           };
 
           zebra.redistribute-route-type-list = [
@@ -109,8 +111,8 @@
 
           defined-sets.prefix-sets = {
             "ps0".prefix-list =  [{
-              ip-prefix = "203.0.113.0/24";
-              masklength-range = "24..32";
+              ip-prefix = "203.0.112.0/23";
+              masklength-range = "23..32";
             }];
 
             "ps1".prefix-list = [{
@@ -151,8 +153,8 @@
     b.wait_for_unit("gobgpd.service")
 
     with subtest("ensure bgp sessions are established"):
-      a.wait_until_succeeds("vtysh -c 'show bgp ipv4 summary' | grep '192.0.2.2.*1\\s*2\\s*N/A'")
-      b.wait_until_succeeds("gobgp neighbor -a 'ipv4' | grep '192.0.2.1.*Establ.*|.*2.*1'")
+      a.wait_until_succeeds("vtysh -c 'show bgp ipv4 summary' | grep '192.0.2.2.*2\\s*3\\s*N/A'")
+      b.wait_until_succeeds("gobgp neighbor -a 'ipv4' | grep '192.0.2.1.*Establ.*|.*3.*1'")
 
       a.wait_until_succeeds("vtysh -c 'show bgp ipv6 summary' | grep '2001:db8::2.*1\\s*2\\s*N/A'")
       b.wait_until_succeeds("gobgp neighbor -a 'ipv6' | grep '2001:db8::1.*Establ.*|.*2.*1'")
@@ -160,6 +162,7 @@
     with subtest("ensure routes have been installed in fib"):
       b.succeed("ip route show | grep 198.51.100.0/25")
       a.succeed("ip route show | grep 203.0.113.0/24")
+      a.wait_until_succeeds("ip route show | grep 203.0.112.0/23")
 
       b.succeed("ip -6 route show | grep 2001:db8:beef::/48")
       a.succeed("ip -6 route show | grep 2001:db8:dead::/48")

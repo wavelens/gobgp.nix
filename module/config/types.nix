@@ -72,23 +72,29 @@
 
   routePolicyEnumType = lib.types.enum [ "accept-route" "reject-route" ];
 
-  aggregateAddressesType = opt {
-    ignore = dummyType;
+  aggregateRouteType = { name, ... }: (opt {
+    config = dummyType;
     prefix = lib.mkOption {
       type = ipType.anyCidr;
-      description = "Aggregate address prefix (CIDR).";
+      default = name;
+      description = "Prefix of the aggregate route in CIDR notation. Default value: the attribute name.";
     };
 
     summary-only = lib.mkOption {
       type = lib.types.bool;
-      description = "Enable summary only for the aggregate address.";
+      description = "Suppress more specific routes that contribute to the aggregate.";
+    };
+
+    as-set = lib.mkOption {
+      type = lib.types.bool;
+      description = "Build an AS_SET from the AS path of the contributing routes.";
     };
 
     policy-name = lib.mkOption {
       type = lib.types.str;
-      description = "Policy name to apply to the aggregate address.";
+      description = "Policy that routes contributing to the aggregate pass.";
     };
-  };
+  });
 
   applyPolicyType = opt {
     config = dummyType;
@@ -163,6 +169,7 @@
     use-multiple-paths = nestedEnableType "enabled" "Enable Equal Cost Multipath Routing with Zebra.";
     apply-policy = attrsTypeOf applyPolicyType "Global apply policy settings.";
     confederation = attrsTypeOf confederationType "BGP Confederation settings.";
+    aggregates = listTypeOf aggregateRouteType "Aggregate routes generated from the global RIB.";
   };
 
   rpkiServerType = opt {
@@ -622,6 +629,55 @@
   });
 
 
+  neighborTcpAoKeychainType = opt {
+    config = dummyType;
+    keychain = lib.mkOption {
+      type = lib.types.str;
+      description = "Name of the TCP-AO keychain to use.";
+    };
+
+    send-id = lib.mkOption {
+      type = lib.types.ints.u8;
+      description = "Key identifier to send, obtained from the keychain.";
+    };
+  };
+
+  neighborBfdType = opt {
+    config = dummyType;
+    enabled = lib.mkOption {
+      type = lib.types.bool;
+      description = "Enable BFD for the neighbor.";
+    };
+
+    port = lib.mkOption {
+      type = lib.types.port;
+      description = "UDP port for BFD sessions. Default 3784, or 4784 for multihop.";
+    };
+
+    multihop = lib.mkOption {
+      type = lib.types.bool;
+      description = "Use multihop BFD (RFC 5883) in place of single-hop BFD.";
+    };
+
+    desired-minimum-tx-interval = lib.mkOption {
+      type = lib.types.ints.u32;
+      example = 1000000;
+      description = "Desired minimum transmit interval in microseconds.";
+    };
+
+    required-minimum-receive = lib.mkOption {
+      type = lib.types.ints.u32;
+      example = 1000000;
+      description = "Required minimum interval between received packets, in microseconds.";
+    };
+
+    detection-multiplier = lib.mkOption {
+      type = lib.types.ints.u8;
+      example = 3;
+      description = "Number of packets that are lost before a session can go down.";
+    };
+  };
+
   neighborRouteServerType = (opt {
     config = dummyType;
     route-server-client = lib.mkOption {
@@ -704,6 +760,8 @@
       apply-policy = attrsTypeOf applyPolicyType "Apply policy settings for the neighbor.";
       route-server = attrsTypeOf neighborRouteServerType "Route server settings for the neighbor.";
       ttl-security = attrsTypeOf afiSafisTtlSecurityType "TTL Security settings for the neighbor.";
+      bfd = attrsTypeOf neighborBfdType "BFD settings for the neighbor.";
+      tcp-ao = attrsTypeOf neighborTcpAoKeychainType "TCP-AO settings for the neighbor.";
     };
   };
 
@@ -892,26 +950,39 @@
     statements = listTypeOf policyDefinitionStatmentType "List of policy statements.";
   });
 
-  collectorType = opt {
+  tcpAoKeychainKeyType = opt {
     config = dummyType;
-    url = lib.mkOption {
-      type = lib.types.str;
-      example = "http://localhost:8080";
-      description = "Collector endpoint URL.";
+    key-id = lib.mkOption {
+      type = lib.types.ints.u8;
+      description = "Key identifier sent to the peer.";
     };
 
-    db-name = lib.mkOption {
+    secret-key = lib.mkOption {
       type = lib.types.str;
-      example = "gobgp";
-      description = "Database name for collector.";
+      description = "A shared secret for keys is in the Nix store. All local users can read the secret.";
     };
 
-    table-dump-interval = lib.mkOption {
-      type = lib.types.ints.unsigned;
-      example = 60;
-      description = "Table dump interval in seconds for collector.";
+    crypto-algorithm = lib.mkOption {
+      type = lib.types.enum [ "hmac-sha-1-96" "aes-128-cmac-96" "hmac-sha-256-96" "hmac-sha-256-128" ];
+      description = "MAC algorithm of the key.";
+    };
+
+    receive-id = lib.mkOption {
+      type = lib.types.ints.u8;
+      description = "Key identifier expected from the peer.";
+    };
+
+    exclude-tcp-options = lib.mkOption {
+      type = lib.types.bool;
+      description = "Exclude TCP options from the MAC calculation.";
     };
   };
+
+  tcpAoKeychainType = { name, ... }: (opt {
+    config = dummyType;
+    name = mkNameOption name "TCP-AO key chain name.";
+    keys = listTypeOf tcpAoKeychainKeyType "A key in the TCP-AO keychain.";
+  });
 
   staticPathType = opt {
     ignore = dummyType;
@@ -1007,14 +1078,13 @@
     vrfs = listTypeOf vrfType "VRF configurations.";
     mtr-dump = listTypeOf mtrDumpType "MRT dump configurations.";
     zebra = attrsTypeOf zebraType "Zebra integration settings.";
-    collector = attrsTypeOf collectorType "Collector settings.";
+    keychains = listTypeOf tcpAoKeychainType "TCP-AO keychains that neighbors and peer groups can reference.";
     neighbors = listTypeOf neighborType "BGP neighbors.";
     peer-groups = listTypeOf peerGroupType "BGP peer groups.";
     dynamic-neighbors = listTypeOf dynamicNeighborType "Dynamic BGP neighbors.";
     defined-sets = attrsTypeOf definedSetsType "Defined sets for policies.";
     policy-definitions = listTypeOf policyDefinitionType "BGP policy definitions.";
     static-paths = listTypeOf staticPathType "Static BGP paths.";
-    aggregate-addresses = listTypeOf aggregateAddressesType "Aggregate BGP addresses.";
     # sentry = attrsTypeOf sentryType "Sentry monitoring settings.";
   });
 in configType
