@@ -45,8 +45,8 @@
           # owner = "osrg";
           owner = "DerDennisOP";
           repo = "gobgp";
-          rev = "71e28e3edb96337a080b3d8a5aacee63ae5abd7d";
-          sha256 = "sha256-NNZbhAE0N6e+xf/dTO/4p5DE2Imqeo9ZoO5hFGArYxQ=";
+          rev = "14ed9036497818f68ea082ea3dac13d0ef84eb80";
+          sha256 = "sha256-b04som5KHAzXhAX5FqT2Fvw2PgJvEJWWRHqlmlbUqBQ=";
         };
 
       in {
